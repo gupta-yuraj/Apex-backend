@@ -6,12 +6,12 @@ const { v4: uuidv4 } = require('uuid');
 const app = express();
 const PORT = process.env.PORT || 3002;
 
-// Connect to MongoDB
+// Connect MongoDB
 mongoose.connect(process.env.MONGODB_URI)
   .then(() => console.log('✅ MongoDB connected'))
   .catch(err => console.log('❌ MongoDB error:', err));
 
-// Application Schema
+// Schema
 const applicationSchema = new mongoose.Schema({
   id: String,
   name: String,
@@ -32,7 +32,6 @@ app.use(cors({
   methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
-
 app.use(express.json());
 
 // Health check
@@ -40,7 +39,7 @@ app.get('/api', (req, res) => {
   res.json({ status: 'Server running' });
 });
 
-// Submit application
+// Submit
 app.post('/api/apply', async (req, res) => {
   try {
     const { name, email, phone, college, year, resume, message } = req.body;
@@ -55,28 +54,22 @@ app.post('/api/apply', async (req, res) => {
     }
 
     const newApp = new Application({
-      id: uuidv4(),
-      name, email, phone, college, year, resume,
-      message: message || '',
+      id: uuidv4(), name, email, phone, college,
+      year, resume, message: message || '',
       status: 'Pending',
       appliedAt: new Date().toLocaleString()
     });
 
     await newApp.save();
-
-    res.status(201).json({
-      success: true,
-      message: 'Application submitted successfully',
-      data: { id: newApp.id, status: newApp.status }
-    });
+    res.status(201).json({ success: true, message: 'Application submitted!', data: { id: newApp.id } });
 
   } catch (error) {
-    console.error('Server error:', error);
+    console.error(error);
     res.status(500).json({ success: false, error: 'Server error' });
   }
 });
 
-// Get all applications
+// Get all
 app.get('/api/applications', async (req, res) => {
   try {
     const applications = await Application.find().sort({ _id: -1 });
@@ -91,26 +84,18 @@ app.patch('/api/applications/:id', async (req, res) => {
   try {
     const { status } = req.body;
     const validStatuses = ['Pending', 'Reviewing', 'Interview', 'Rejected', 'Hired'];
-
     if (!validStatuses.includes(status)) {
       return res.status(400).json({ error: 'Invalid status' });
     }
-
-    const app = await Application.findOneAndUpdate(
-      { id: req.params.id },
-      { status },
-      { new: true }
-    );
-
+    const app = await Application.findOneAndUpdate({ id: req.params.id }, { status }, { new: true });
     if (!app) return res.status(404).json({ error: 'Not found' });
     res.json({ success: true, data: app });
-
   } catch (error) {
     res.status(500).json({ success: false, error: 'Server error' });
   }
 });
 
-// Delete application
+// Delete
 app.delete('/api/applications/:id', async (req, res) => {
   try {
     const app = await Application.findOneAndDelete({ id: req.params.id });
@@ -121,6 +106,4 @@ app.delete('/api/applications/:id', async (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-});
+app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
